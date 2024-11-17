@@ -46,12 +46,45 @@ function start(client) {
       client.sendText(message.from, 'You are not authorized to use this command.');
     }
   });
+
+  // Handle session status changes
+  client.on('statusFind', (statusSession, session) => {
+    console.log('Status Session: ', statusSession);
+    console.log('Session name: ', session);
+    if (statusSession === 'notLogged' || statusSession === 'qrReadFail') {
+      console.log('Session is not logged in or QR code read failed. Re-creating session.');
+      wppconnect.create({ phoneNumber: '6287834100533', catchLinkCode: (str) => console.log('Code: ' + str) })
+        .then((newClient) => start(newClient))
+        .catch((error) => console.log(error));
+    }
+  });
+
+  // Handle errors
+  client.on('error', (error) => {
+    console.error('Error: ', error);
+    if (error.message.includes('Execution context was destroyed')) {
+      console.log('Execution context was destroyed. Re-creating session.');
+      wppconnect.create({ phoneNumber: '6287834100533', catchLinkCode: (str) => console.log('Code: ' + str) })
+        .then((newClient) => start(newClient))
+        .catch((error) => console.log(error));
+    }
+  });
 }
 
 wppconnect
   .create({
     phoneNumber: '6287834100533', // Nomor WhatsApp bot
     catchLinkCode: (str) => console.log('Code: ' + str),
+    statusFind: (statusSession, session) => {
+      console.log('Status Session: ', statusSession);
+      console.log('Session name: ', session);
+      if (statusSession === 'notLogged' || statusSession === 'qrReadFail') {
+        console.log('Session is not logged in or QR code read failed. Re-creating session.');
+        wppconnect.create({ phoneNumber: '6287834100533', catchLinkCode: (str) => console.log('Code: ' + str) })
+          .then((newClient) => start(newClient))
+          .catch((error) => console.log(error));
+      }
+    },
   })
   .then((client) => start(client))
   .catch((error) => console.log(error));
