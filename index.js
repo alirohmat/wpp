@@ -2,7 +2,7 @@ const wppconnect = require('@wppconnect-team/wppconnect');
 const { exec } = require('child_process');
 
 // Daftar ID WhatsApp yang diizinkan (owner)
-const owners = ['6287834100533@s.whatsapp.net']; // Gantilah dengan ID WhatsApp Anda
+const owners = ['6282132789470@s.whatsapp.net']; // Gantilah dengan ID WhatsApp Anda
 
 function start(client) {
   client.onMessage(async (message) => {
@@ -28,6 +28,8 @@ function start(client) {
             // Mengirimkan pesan jika ada output error
             return client.sendText(message.from, `stderr: ${stderr}`);
           }
+          // Jika tidak ada output, kirim pesan konfirmasi
+          client.sendText(message.from, 'Command executed successfully with no output.');
         });
       } catch (e) {
         // Mengirimkan pesan error jika terjadi kesalahan saat mengeksekusi perintah
