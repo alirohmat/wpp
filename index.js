@@ -51,8 +51,8 @@ function start(client) {
   client.on('statusFind', (statusSession, session) => {
     console.log('Status Session: ', statusSession);
     console.log('Session name: ', session);
-    if (statusSession === 'notLogged' || statusSession === 'qrReadFail') {
-      console.log('Session is not logged in or QR code read failed. Re-creating session.');
+    if (statusSession === 'notLogged' || statusSession === 'qrReadFail' || statusSession === 'desconnectedMobile' || statusSession === 'qrReadError' || statusSession === 'autocloseCalled' || statusSession === 'browserClose') {
+      console.log('Session is not logged in, QR code read failed, or disconnected from mobile. Re-creating session.');
       wppconnect.create({ phoneNumber: '6287834100533', catchLinkCode: (str) => console.log('Code: ' + str) })
         .then((newClient) => start(newClient))
         .catch((error) => console.log(error));
@@ -78,13 +78,21 @@ wppconnect
     statusFind: (statusSession, session) => {
       console.log('Status Session: ', statusSession);
       console.log('Session name: ', session);
-      if (statusSession === 'notLogged' || statusSession === 'qrReadFail') {
-        console.log('Session is not logged in or QR code read failed. Re-creating session.');
+      if (statusSession === 'notLogged' || statusSession === 'qrReadFail' || statusSession === 'desconnectedMobile' || statusSession === 'qrReadError' || statusSession === 'autocloseCalled' || statusSession === 'browserClose') {
+        console.log('Session is not logged in, QR code read failed, or disconnected from mobile. Re-creating session.');
         wppconnect.create({ phoneNumber: '6287834100533', catchLinkCode: (str) => console.log('Code: ' + str) })
           .then((newClient) => start(newClient))
           .catch((error) => console.log(error));
       }
     },
+    headless: true, // Headless chrome
+    devtools: false, // Open devtools by default
+    useChrome: true, // If false will use Chromium instance
+    debug: false, // Opens a debug session
+    logQR: true, // Logs QR automatically in terminal
+    browserWS: '', // If you want to use browserWSEndpoint
+    browserArgs: [''], // Parameters to be added into the chrome browser instance
+    puppeteerOptions: {}, // Will be passed to puppeteer
   })
   .then((client) => start(client))
   .catch((error) => console.log(error));
