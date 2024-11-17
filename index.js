@@ -9,10 +9,16 @@ function start(client) {
     // Cek apakah pesan diawali dengan $ dan pengirim adalah owner
     if (message.body.startsWith('$') && owners.includes(message.from)) {
       try {
+        // Mengirimkan pesan "Processing..." untuk memberi tahu pengguna bahwa perintah sedang diproses
         await client.sendText(message.from, 'Processing...');
 
         // Mengambil perintah shell dari pesan setelah simbol "$"
         const command = message.body.slice(1).trim(); // Hapus "$" dan spasi tambahan
+
+        // Jika perintah kosong, beri tahu pengguna
+        if (!command) {
+          return client.sendText(message.from, 'No command provided. Please provide a valid shell command.');
+        }
 
         // Mengeksekusi perintah shell
         exec(command, (err, stdout, stderr) => {
