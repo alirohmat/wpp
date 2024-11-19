@@ -12,6 +12,9 @@ import (
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
+
+	// Import driver SQLite
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func eventHandler(evt interface{}) {
@@ -34,12 +37,12 @@ func main() {
 	// Membuat database store untuk menyimpan session
 	container, err := sqlstore.New("sqlite3", "file:examplestore.db?_foreign_keys=on", dbLog)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to open database: %v", err))
 	}
 
 	deviceStore, err := container.GetFirstDevice()
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to get first device: %v", err))
 	}
 
 	// Inisialisasi WhatsMeow client
@@ -51,7 +54,7 @@ func main() {
 		qrChan, _ := client.GetQRChannel(context.Background())
 		err = client.Connect()
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("failed to connect: %v", err))
 		}
 
 		for evt := range qrChan {
@@ -66,7 +69,7 @@ func main() {
 		// Jika sudah login, langsung koneksi
 		err = client.Connect()
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("failed to connect: %v", err))
 		}
 	}
 
