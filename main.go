@@ -13,29 +13,29 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 
-	// Import driver SQLite
-	_ "github.com/mattn/go-sqlite3"
+	// Import driver SQLite modernc
+	_ "modernc.org/sqlite"
 )
 
 func eventHandler(evt interface{}) {
 	switch v := evt.(type) {
 	case *events.Message:
-		go func() { // Proses pesan dalam goroutine untuk tidak menghalangi event lain
+		go func() { // Proses pesan dalam goroutine
 			if v.Message.GetConversation() != "" {
 				fmt.Println("Pesan diterima:", v.Message.GetConversation())
-				time.Sleep(10 * time.Millisecond) // Tambahkan delay untuk mengurangi beban CPU
+				time.Sleep(10 * time.Millisecond) // Tambahkan delay kecil untuk mengurangi beban CPU
 			}
 		}()
 	}
 }
 
 func main() {
-	// Konfigurasi log database dan client
+	// Konfigurasi log untuk database dan client
 	dbLog := waLog.Stdout("Database", "WARN", true)
 	clientLog := waLog.Stdout("Client", "WARN", true)
 
-	// Membuat database store untuk menyimpan session
-	container, err := sqlstore.New("sqlite3", "file:examplestore.db?_foreign_keys=on", dbLog)
+	// Membuat database store menggunakan driver modernc SQLite
+	container, err := sqlstore.New("sqlite", "file:examplestore.db?_foreign_keys=on", dbLog)
 	if err != nil {
 		panic(fmt.Sprintf("failed to open database: %v", err))
 	}
@@ -45,11 +45,11 @@ func main() {
 		panic(fmt.Sprintf("failed to get first device: %v", err))
 	}
 
-	// Inisialisasi WhatsMeow client
+	// Inisialisasi client WhatsMeow
 	client := whatsmeow.NewClient(deviceStore, clientLog)
 	client.AddEventHandler(eventHandler)
 
-	// Proses login dan koneksi
+	// Login atau koneksi ulang
 	if client.Store.ID == nil {
 		qrChan, _ := client.GetQRChannel(context.Background())
 		err = client.Connect()
@@ -66,14 +66,14 @@ func main() {
 			}
 		}
 	} else {
-		// Jika sudah login, langsung koneksi
+		// Koneksi ulang
 		err = client.Connect()
 		if err != nil {
 			panic(fmt.Sprintf("failed to connect: %v", err))
 		}
 	}
 
-	// Menangkap sinyal Ctrl+C atau SIGTERM untuk menutup aplikasi dengan aman
+	// Menangkap sinyal untuk menghentikan aplikasi
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
