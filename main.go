@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/store/sqlstore"
@@ -16,58 +17,65 @@ import (
 func eventHandler(evt interface{}) {
 	switch v := evt.(type) {
 	case *events.Message:
-		fmt.Println("Received a message!", v.Message.GetConversation())
+		go func() { // Proses pesan dalam goroutine untuk tidak menghalangi event lain
+			if v.Message.GetConversation() != "" {
+				fmt.Println("Pesan diterima:", v.Message.GetConversation())
+				time.Sleep(10 * time.Millisecond) // Tambahkan delay untuk mengurangi beban CPU
+			}
+		}()
 	}
 }
 
 func main() {
-	// |------------------------------------------------------------------------------------------------------|
-	// | NOTE: You must also import the appropriate DB connector, e.g. github.com/mattn/go-sqlite3 for SQLite |
-	// |------------------------------------------------------------------------------------------------------|
+	// Konfigurasi log database dan client
+	dbLog := waLog.Stdout("Database", "WARN", true)
+	clientLog := waLog.Stdout("Client", "WARN", true)
 
-	dbLog := waLog.Stdout("Database", "DEBUG", true)
+	// Membuat database store untuk menyimpan session
 	container, err := sqlstore.New("sqlite3", "file:examplestore.db?_foreign_keys=on", dbLog)
 	if err != nil {
 		panic(err)
 	}
-	// If you want multiple sessions, remember their JIDs and use .GetDevice(jid) or .GetAllDevices() instead.
+
 	deviceStore, err := container.GetFirstDevice()
 	if err != nil {
 		panic(err)
 	}
-	clientLog := waLog.Stdout("Client", "DEBUG", true)
+
+	// Inisialisasi WhatsMeow client
 	client := whatsmeow.NewClient(deviceStore, clientLog)
 	client.AddEventHandler(eventHandler)
 
+	// Proses login dan koneksi
 	if client.Store.ID == nil {
-		// No ID stored, new login
 		qrChan, _ := client.GetQRChannel(context.Background())
 		err = client.Connect()
 		if err != nil {
 			panic(err)
 		}
+
 		for evt := range qrChan {
 			if evt.Event == "code" {
-				// Render the QR code here
-				// e.g. qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
-				// or just manually `echo 2@... | qrencode -t ansiutf8` in a terminal
-				fmt.Println("QR code:", evt.Code)
-			} else {
-				fmt.Println("Login event:", evt.Event)
+				fmt.Println("QR Code untuk login:", evt.Code)
+			} else if evt.Event == "success" {
+				fmt.Println("Login berhasil!")
+				break
 			}
 		}
 	} else {
-		// Already logged in, just connect
+		// Jika sudah login, langsung koneksi
 		err = client.Connect()
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	// Listen to Ctrl+C (you can also do something else that prevents the program from exiting)
+	// Menangkap sinyal Ctrl+C atau SIGTERM untuk menutup aplikasi dengan aman
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
 
+	fmt.Println("Menutup koneksi...")
 	client.Disconnect()
+	fmt.Println("Selesai.")
 }
